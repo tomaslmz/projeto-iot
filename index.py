@@ -1,4 +1,4 @@
-from flask import Flask, render_template
+from flask import Flask, render_template, request, jsonify
 import paho.mqtt.client as mqtt
 import json
 import mysql.connector
@@ -15,9 +15,15 @@ data = ''
 
 def on_message(client, userdata, msg):
     # print('oi')
-    data = json.loads(msg.payload)
-    # print(json.loads(msg.payload))
-    socketio.emit('data', data)
+    try:
+        data = json.loads(msg.payload)
+        socketio.emit('data', data)
+        if(data['temp'] > 26):
+            subscribe.publish('status', 'A janela está aberta!')
+        else:
+            subscribe.publish('status', 'A janela está fechada!')
+    except json.JSONDecodeError:
+        print(f"Payload was not a valid JSON: {msg.payload}")
 
 subscribe = mqtt.Client()
 # subscribe.username_pw_set(user, password)
@@ -27,8 +33,17 @@ subscribe.on_message = on_message
 
 @socketio.on('connect')
 def handle_connect():
-    print(data)
+    print(data) 
     socketio.emit('data', data)
+
+@app.route("/window/state", methods = ['POST'])
+def handle_request():
+    state = request.json['state']
+
+    data = json.dumps({'state': state})
+
+    subscribe.publish('flask', data)
+    return 'ok'
 
 @app.route("/")
 def index():

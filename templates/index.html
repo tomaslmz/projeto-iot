@@ -6,10 +6,76 @@
     <title>Janela</title>
 </head>
 <style>
+        /* The switch - the box around the slider */
+    .switch {
+        position: relative;
+        display: inline-block;
+        width: 60px;
+        height: 34px;
+        transform: scale(0.7)
+    }
+
+    /* Hide default HTML checkbox */
+    .switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+    }
+
+    /* The slider */
+    .slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: #ccc;
+        -webkit-transition: .4s;
+        transition: .4s;
+    }
+
+    .slider:before {
+        position: absolute;
+        content: "";
+        height: 26px;
+        width: 26px;
+        left: 4px;
+        bottom: 4px;
+        background-color: white;
+        -webkit-transition: .4s;
+        transition: .4s;
+    }
+
+    input:checked + .slider {
+        background-color: #2196F3;
+    }
+
+    input:focus + .slider {
+        box-shadow: 0 0 1px #2196F3;
+    }
+
+    input:checked + .slider:before {
+        -webkit-transform: translateX(26px);
+        -ms-transform: translateX(26px);
+        transform: translateX(26px);
+    }
+
+    /* Rounded sliders */
+    .slider.round {
+        border-radius: 34px;
+    }
+
+    .slider.round:before {
+        border-radius: 50%;
+    }
+</style>
+<style>
     * {
         box-sizing: border-box;
         margin: 0;
         padding: 0;
+        font-family: Arial, Helvetica, sans-serif;
     }
     
     body {
@@ -58,8 +124,97 @@
         background-position: center;
         transition: width 300ms linear;
     }
+
+    footer {
+        position: fixed;
+        bottom: 10px;
+        left: 10px;
+    }
+
+    .btn {
+        background-color: rgb(255, 255, 255);
+        border: none;
+        padding: 10px;
+        border-radius: 10px;
+        transition: background 150ms linear;
+    }
+
+    .btn:hover {
+        cursor: pointer;
+        background-color: rgb(207, 206, 206);
+    }
+
+    .modal-background {
+        position: fixed;
+        display: none;
+        background-color: rgba(0, 0, 0, 0.493);
+        width: 100vw;
+        height: 100vh;
+    }
+
+    .modal {
+        position: fixed;
+        display: none;
+        justify-content: center;
+        align-items: center;
+        flex-direction: column;
+        width: 200px;
+        gap: 5px;
+        height: 200px;
+        background-color: rgb(255, 255, 255);
+        border-radius: 10px;
+    }
+
+    .switch-container {
+        display: flex;
+        margin-left: -18px;
+        justify-content: center;
+        align-items: center;
+        height: 50px;
+    }
+
+    .window-btn {
+        background-color: black;
+        color: white;
+        border: none;
+        padding: 10px;
+        border-radius: 10px;
+        transition: background 150ms linear;
+    }
+
+    .window-btn:hover {
+        cursor: pointer;
+        background-color: rgb(39, 39, 39);
+    }
+
+    .close-btn {
+        background-color: white;
+        color: black;
+        border: 1px solid black;
+        padding: 5px;
+        border-radius: 10px;
+        transition: background 150ms linear;
+    }
+
+    .close-btn:hover {
+        cursor: pointer;
+        background-color: rgb(207, 206, 206);
+    }
 </style>
 <body>
+    <section class="modal-background"></section>
+    <section class="modal">
+        <div class="switch-container">
+            <p>Unlock</p>
+            <label class="switch">
+                <input type="checkbox" id="checkbox">
+                <span class="slider round"></span>
+            </label>
+            <p>Lock</p>
+        </div>
+        <button class="window-btn" onclick="executeButton()">Open</button>
+        <button class="close-btn" onclick="closeModal()">Close</button>
+    </section>
     <main class="container">
         <div class="house">
     
@@ -72,20 +227,66 @@
             <div class="square"></div>
             <div class="square"></div>
         </div>
-        
     </main>
-    
+    <footer>
+        <button class="btn" onclick="openModal()">Controller</button>
+    </footer>
     <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
     <script>
+        var futureState = 'Open';
+
+        function closeModal() {
+            document.querySelector('.modal-background').style.display = 'none';
+            document.querySelector('.modal').style.display = 'none';
+            document.querySelector('.house').style.display = 'block';
+        }
+
+        function openModal() {
+            document.querySelector('.modal-background').style.display = 'block';
+            document.querySelector('.modal').style.display = 'flex';
+            document.querySelector('.house').style.display = 'none';
+        }
+
+        async function executeButton() {
+
+            const body = {
+                state: document.querySelector('.window-btn').innerHTML.toLowerCase(),
+            }
+            try {
+                await fetch('./window/state', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(body),
+                });
+            } catch(e) {
+                console.log(e);
+            }
+
+            if(document.querySelector('.window-btn').innerHTML.toLowerCase() == 'open') {
+                document.querySelector('.house').style.display = 'none';
+                document.querySelector('.container').style.gap = '200px';
+                document.querySelector('.house').style.width = '200px';
+                document.querySelector('.window-btn').innerHTML = 'Close';
+            } else {
+                document.querySelector('.container').style.gap = '0px';
+                document.querySelector('.house').style.width = '0px';
+                document.querySelector('.window-btn').innerHTML = 'Open';
+            }
+        }
+
         const socket = io();
 
         socket.on('data', (data) => {
             if(data.temp > 25) {
                 document.querySelector('.container').style.gap = '200px';
                 document.querySelector('.house').style.width = '200px';
+                document.querySelector('.window-btn').innerHTML = 'Close';
             } else {
                 document.querySelector('.container').style.gap = '0px';
                 document.querySelector('.house').style.width = '0px';
+                document.querySelector('.window-btn').innerHTML = 'Open';
             }
         });
     </script>
